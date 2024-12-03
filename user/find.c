@@ -5,7 +5,7 @@
 
 void find(const char *path, const char *filename)
 {
-    char buf[512], *p
+    char buf[512], *p;
     int fd;
     struct dirent de;
     struct stat st;
@@ -17,7 +17,7 @@ void find(const char *path, const char *filename)
     if(fstat(fd, &st) < 0)
     {
         fprintf(2, "ls: cannot stat %s\n", path);
-        eixt(1);
+        exit(1);
     }
     switch(st.type)
     {
@@ -55,14 +55,15 @@ void find(const char *path, const char *filename)
     }
 }
 
-int main(int argc, int *argv[])
+int main(int argc, char *argv[])
 {
     if(argc != 3)
     {
-        sprintf(2, "find argc not 3\n");
-        eixt(1);
+        fprintf(2, "find argc not 3\n");
+        exit(1);
     }
     const char *path = argv[1];
     const char *filename = argv[2];
     find(path, filename);
+    exit(0);
 }

@@ -3,7 +3,7 @@
 #include "user/user.h"
 #include "kernel/param.h"
 
-void readline(char *new_argv[MAXARG], int argc)
+int readline(char *new_argv[MAXARG], int argc)
 {
     char buf[1024];
     int n = 0;
@@ -18,24 +18,26 @@ void readline(char *new_argv[MAXARG], int argc)
     int offset = 0;
     while(offset < n)
     {
-        new_argv[argc++] = buf+offset;
+        new_argv[argc++] = buf + offset;
         while(buf[offset] != ' ' && offset < n) offset++;
-        while(buf[offset] == ' ') buf[offset++]=0;
+        while(buf[offset] == ' ') buf[offset++] = 0;
     }
+    new_argv[argc] = 0;
     return n;
 }
 
-int main(int argc, int *argv[])
+int main(int argc, char *argv[])
 {
     if(argc <= 1)
     {
-        sprintf(2, "xargs: command(arg...)\n");
+        fprintf(2, "xargs: command(arg...)\n");
         exit(1);
     }
     char *command = argv[1];
-    char new_argv[MAXARG][256];
+    char *new_argv[MAXARG];
     for(int i = 1; i < argc; ++i)
     {
+        new_argv[i-1] = malloc(strlen(argv[i])+1);
         strcpy(new_argv[i-1], argv[i]);
     }
     while(readline(new_argv, argc-1))
@@ -48,5 +50,7 @@ int main(int argc, int *argv[])
         }
         wait(0);
     }
+    for(int i = 1; i < argc; ++i)
+        free(new_argv[i-1]);
     exit(0);
 }
