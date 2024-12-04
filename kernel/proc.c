@@ -35,12 +35,12 @@ procinit(void)
       // Map it high in memory, followed by an invalid
       // guard page.
 
-      // char *pa = kalloc();
-      // if(pa == 0)
-      //   panic("kalloc");
-      // uint64 va = KSTACK((int) (p - proc));
-      // kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      // p->kstack = va;
+      char *pa = kalloc();
+      if(pa == 0)
+        panic("kalloc");
+      uint64 va = KSTACK((int) (p - proc));
+      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      p->kstack = va;
   }
   kvminithart();
 }
@@ -158,10 +158,12 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
 
-  uvmunmap();
-  p->kstack = 0;
   if(p->kpagetable)
+  {
+    uvmunmap(p->kpagetable, p->kstack, 1, 1);
+    p->kstack = 0;
     freeprockpt(p->kpagetable);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
