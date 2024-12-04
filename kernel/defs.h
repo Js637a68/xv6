@@ -167,8 +167,7 @@ pagetable_t     uvmcreate(void);
 void            uvminit(pagetable_t, uchar *, uint);
 uint64          uvmalloc(pagetable_t, uint64, uint64);
 uint64          uvmdealloc(pagetable_t, uint64, uint64);
-void
-u2kcopy(pagetable_t uptl, pagetable_t kptl, uint64 va, uint64 sz);
+void            u2kcopy(pagetable_t, pagetable_t, uint64, uint64);
 
 // vmcopyin.c
 int             copyin_new(pagetable_t, char*, uint64, uint64);

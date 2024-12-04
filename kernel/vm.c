@@ -427,6 +427,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  return copyin_new(pagetable, dst, srcva, len);
   // uint64 n, va0, pa0;
 
   // while(len > 0){
@@ -444,7 +445,6 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
   //   srcva = va0 + PGSIZE;
   // }
   // return 0;
-  return copyin_new(pagetable, dst, srcva, len);
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -525,19 +525,18 @@ vmprintf(pagetable_t pagetable)
 
 
 void
-u2kcopy(pagetable_t uptl, pagetable_t kptl, uint64 va, uint64 sz)
+u2kcopy(pagetable_t uptb, pagetable_t kptb, uint64 va, uint64 sz)
 {
-  pte_t *pte1, *pte2;
+  pte_t *pte, *pte1;
   va = PGROUNDDOWN(va);
   for(; va < sz; va += PGSIZE)
   {
-    if((pte1 = walk(uptl, va, 0)) == 0)
-      panic("u2kmap: walkaddr");
-    if((pte2 = walk(kptl, va, 1)) == 0)
+    if((pte = walk(uptb, va, 0)) == 0)
       panic("u2kmap: walk");
-    
-    uint64 pa = PTE2PA(*pte1);
-    uint flags = PTE_FLAGS(*pte1) & (~PTE_U);
-    *pte2 = PA2PTE(pa) | flags;
+    if((pte1 = walk(kptb, va, 1)) == 0)
+      panic("u2kmap: walk");
+    uint flags = PTE_FLAGS(*pte) & (~PTE_U);
+    uint64 pa = PTE2PA(*pte);
+    *pte1 = PA2PTE(pa) | flags;
   }
 }
