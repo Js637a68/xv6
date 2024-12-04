@@ -35,12 +35,12 @@ procinit(void)
       // Map it high in memory, followed by an invalid
       // guard page.
 
-      char *pa = kalloc();
-      if(pa == 0)
-        panic("kalloc");
-      uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
+      // char *pa = kalloc();
+      // if(pa == 0)
+      //   panic("kalloc");
+      // uint64 va = KSTACK((int) (p - proc));
+      // kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      // p->kstack = va;
   }
   kvminithart();
 }
@@ -122,12 +122,6 @@ found:
     return 0;
   }
 
-  // Set up new context to start executing at forkret,
-  // which returns to user space.
-  memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
-
   p->kpagetable =prockptinit();
   if(p->kpagetable == 0){
     freeproc(p);
@@ -142,6 +136,12 @@ found:
   uint64 va = KSTACK((int) (p - proc));
   prockptmap(p->kpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   p->kstack = va;
+
+  // Set up new context to start executing at forkret,
+  // which returns to user space.
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.ra = (uint64)forkret;
+  p->context.sp = p->kstack + PGSIZE;
 
   return p;
 }
@@ -266,9 +266,11 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
+    if(sz + n >= PLIC) n = PLIC - sz;
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+    u2kcopy(p->pagetable, p->kpagetable, sz - n, sz);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
@@ -297,6 +299,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  u2kcopy(np->pagetable, np->kpagetable, 0, p->sz);
 
   np->parent = p;
 
