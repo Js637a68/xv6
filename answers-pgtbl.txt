@@ -1,0 +1,1 @@
+从图片3-4可以看到，这段地址是exec init的页表，exec为text和data段分配一个page也就是0，为stack分配一个page也就是2，而中间1是guarde page，程序在用户模式下访问会报错，最后510，511刚好符合trampoline和tramframe

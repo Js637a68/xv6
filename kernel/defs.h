@@ -184,11 +184,26 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
-void            vmprintf(pagetable_t);
-void            prockptmap(pagetable_t, uint64, uint64, uint64, int);
-pagetable_t     prockptinit();
-void            procinithart(pagetable_t);
-void            freeprockpt(pagetable_t kpt);
+void
+vmprintf(pagetable_t pagetable);
+void
+prockptmap(pagetable_t kpt, uint64 va, uint64 pa, uint64 sz, int perm);
+pagetable_t
+prockptinit();
+void
+procinithart(pagetable_t kpt);
+void
+freeprockpt(pagetable_t kpt);
+void
+u2kcopy(pagetable_t uptb, pagetable_t kptb, uint64 va, uint64 sz);
+
+//vimcopyin.c
+int
+statscopyin(char *buf, int sz);
+int
+copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len);
+int
+copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max);
 
 // plic.c
 void            plicinit(void);

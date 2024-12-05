@@ -49,52 +49,6 @@ kvminit()
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
 
-/*
- * create a direct-map page table for the kernel page per proc.
- */
-pagetable_t
-prockptinit()
-{
-  pagetable_t kptb = (pagetable_t) kalloc();
-  if(kptb == 0) return 0;
-  memset(kptb, 0, PGSIZE);
-  prockptmap(kptb, UART0, UART0, PGSIZE, PTE_R | PTE_W);
-  prockptmap(kptb, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
-  prockptmap(kptb, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
-  prockptmap(kptb, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
-  prockptmap(kptb, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
-  prockptmap(kptb, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
-  prockptmap(kptb, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
-  return kptb;
-}
-void
-prockptmap(pagetable_t kpt, uint64 va, uint64 pa, uint64 sz, int perm)
-{
-  if(mappages(kpt, va, sz, pa, perm) != 0)
-    panic("prockptmap");
-}
-void
-procinithart(pagetable_t kpt)
-{
-  w_satp(MAKE_SATP(kpt));
-  sfence_vma();
-}
-void
-freeprockpt(pagetable_t kpt)
-{
-  // there are 2^9 = 512 PTEs in a page table.
-  for(int i = 0; i < 512; i++){
-    pte_t pte = kpt[i];
-    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
-      // this PTE points to a lower-level page table.
-      uint64 child = PTE2PA(pte);
-      freeprockpt((pagetable_t)child);
-      kpt[i] = 0;
-    }
-  }
-  kfree((void*)kpt);
-}
-
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void
@@ -427,6 +381,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+
   return copyin_new(pagetable, dst, srcva, len);
   // uint64 n, va0, pa0;
 
@@ -523,20 +478,59 @@ vmprintf(pagetable_t pagetable)
   }
 }
 
+pagetable_t
+prockptinit()
+{
+  pagetable_t kptb = (pagetable_t) kalloc();
+  memset(kptb, 0, PGSIZE);
+  prockptmap(kptb, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  prockptmap(kptb, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  prockptmap(kptb, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  prockptmap(kptb, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  prockptmap(kptb, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  prockptmap(kptb, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  prockptmap(kptb, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return kptb;
+}
+void
+prockptmap(pagetable_t kpt, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(kpt, va, sz, pa, perm) != 0)
+    panic("kvmmap");
+}
+void
+procinithart(pagetable_t kpt)
+{
+  w_satp(MAKE_SATP(kpt));
+  sfence_vma();
+}
+void
+freeprockpt(pagetable_t kpt)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = kpt[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      // this PTE points to a lower-level page table.
+      uint64 child = PTE2PA(pte);
+      freeprockpt((pagetable_t)child);
+      kpt[i] = 0;
+    }
+  }
+  kfree((void*)kpt);
+}
 
 void
 u2kcopy(pagetable_t uptb, pagetable_t kptb, uint64 va, uint64 sz)
 {
   pte_t *pte, *pte1;
-  va = PGROUNDDOWN(va);
+
   for(; va < sz; va += PGSIZE)
   {
     if((pte = walk(uptb, va, 0)) == 0)
       panic("u2kmap: walk");
     if((pte1 = walk(kptb, va, 1)) == 0)
       panic("u2kmap: walk");
-    uint flags = PTE_FLAGS(*pte) & (~PTE_U);
-    uint64 pa = PTE2PA(*pte);
-    *pte1 = PA2PTE(pa) | flags;
+    *pte1 = *pte & ~(PTE_U);
   }
 }

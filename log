@@ -1,0 +1,7 @@
+Thread 3 hit Breakpoint 1, copyin (pagetable=0x87fb5000, 
+    dst=dst@entry=0x3fffffbdf0 "\005\005\005\005\005\005\005\005", srcva=srcva@entry=2560, 
+    len=len@entry=8) at kernel/vm.c:387
+(gdb) p va0
+$1 = 0
+(gdb) p pa0
+$2 = 2280734720
