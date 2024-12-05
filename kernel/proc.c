@@ -120,6 +120,8 @@ found:
     release(&p->lock);
     return 0;
   }
+  p->oldtrapframe = (struct trapframe *)kalloc();
+
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -127,6 +129,10 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->alarminterval = 0;
+  p->ticks = 0;
+  p->handler = 0;
+  p->alarming = 0;
   return p;
 }
 
@@ -150,6 +156,13 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  p->alarminterval = 0;
+  p->ticks = 0;
+  p->handler = 0;
+  p->alarming = 0;
+  if(p->oldtrapframe)
+    kfree((void*)p->oldtrapframe);
 }
 
 // Create a user page table for a given process,
