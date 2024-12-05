@@ -35,6 +35,12 @@ procinit(void)
       // Map it high in memory, followed by an invalid
       // guard page.
 
+      // char *pa = kalloc();
+      // if(pa == 0)
+      //   panic("kalloc");
+      // uint64 va = KSTACK((int) (p - proc));
+      // kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      // p->kstack = va;
   }
   kvminithart();
 }
@@ -230,6 +236,8 @@ userinit(void)
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
 
+  u2kcopy(p->pagetable, p->kpagetable, 0, p->sz);
+
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
@@ -252,9 +260,11 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
+    if(sz + n > PLIC) return -1;
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+    u2kcopy(p->pagetable, p->kpagetable, sz - n, sz);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
@@ -291,6 +301,8 @@ fork(void)
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
+
+  u2kcopy(np->pagetable, np->kpagetable, 0, np->sz);
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)

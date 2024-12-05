@@ -188,6 +188,16 @@ void
 procinithart(pagetable_t kpt);
 void
 freeprockpt(pagetable_t kpt);
+void
+u2kcopy(pagetable_t uptb, pagetable_t kptb, uint64 va, uint64 sz);
+
+//vimcopyin.c
+int
+statscopyin(char *buf, int sz);
+int
+copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len);
+int
+copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max);
 
 // plic.c
 void            plicinit(void);
