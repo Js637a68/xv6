@@ -104,6 +104,8 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+int
+cowgrowproc(int n);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -171,6 +173,10 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+pte_t *
+walk(pagetable_t pagetable, uint64 va, int alloc);
+void
+vmprintf(pagetable_t pagetable);
 
 // plic.c
 void            plicinit(void);

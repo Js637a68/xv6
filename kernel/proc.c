@@ -253,6 +253,22 @@ growproc(int n)
   return 0;
 }
 
+int
+cowgrowproc(int n)
+{
+  struct proc *p = myproc();
+  uint64 sz = p->sz;
+  uint64 oldsize = PGROUNDUP(sz);
+  while(oldsize < sz+n)
+  {
+    pte_t *pte = walk(p->pagetable, oldsize, 1);
+    *pte = 0;
+    oldsize += PGSIZE;
+  }
+  p->sz = sz + n;
+  return 0;
+}
+
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int
