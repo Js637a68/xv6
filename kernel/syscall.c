@@ -69,12 +69,13 @@ argaddr(int n, uint64 *ip)
 {
   *ip = argraw(n);
   struct proc *p = myproc();
-  if(walkaddr(p->pagetable, *ip) == 0){
-    uint64 va = PGROUNDDOWN(*ip);
-    if(va > myproc()->sz || uvmalloc(myproc()->pagetable, va, va + PGSIZE) == 0) return -1;
-  }
+  uint64 va = *ip;
+  if(walkaddr(p->pagetable, *ip) == 0) 
+    if(va < PGROUNDDOWN(p->trapframe->sp) || va >= myproc()->sz || uvmalloc(p->pagetable, PGROUNDDOWN(va), va+1) == 0)
+      return -1;
   return 0;
 }
+
 
 // Fetch the nth word-sized system call argument as a null-terminated string.
 // Copies into buf, at most max.
