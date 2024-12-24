@@ -129,6 +129,7 @@ void* cowalloc(pagetable_t pagetable, uint64 va)
     return (void*)pa;
   } else{
     char* mem = kalloc();
+    if(mem == 0) return 0;
     memmove(mem, (char*)pa, PGSIZE);
     int flags = (PTE_FLAGS(*pte) & ~PTE_RSW) | PTE_W ;
     *pte = PA2PTE((uint64)mem) | flags;
