@@ -69,7 +69,9 @@ kfree(void *pa)
     r->next = kmem.freelist;
     kmem.freelist = r;
     release(&kmem.lock);
-  } else release(&ref.lock);
+  } else {
+    release(&ref.lock);
+  }
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -93,4 +95,45 @@ kalloc(void)
     release(&ref.lock);
   }
   return (void*)r;
+}
+
+
+void addrefcnt(uint64 pa)
+{
+  acquire(&ref.lock);
+  ++ref.refcnt[pa/PGSIZE];
+  release(&ref.lock);
+}
+
+int refcnt(uint64 pa)
+{
+  return ref.refcnt[pa/PGSIZE];
+}
+
+int cowpage(pagetable_t pagetable, uint64 va)
+{
+  pte_t *pte;
+  if(va >= MAXVA || 
+    (pte = walk(pagetable, va, 0)) == 0 || (*pte & PTE_RSW) == 0) return -1;
+  return 0;
+}
+
+void* cowalloc(pagetable_t pagetable, uint64 va)
+{
+  pte_t *pte = walk(pagetable, va, 0);
+  uint64 pa = PTE2PA(*pte);
+  
+
+  if(ref.refcnt[pa / PGSIZE] < 2) {
+    *pte = (*pte | PTE_W) & ~PTE_RSW;
+    return (void*)pa;
+  } else{
+    char* mem = kalloc();
+    memmove(mem, (char*)pa, PGSIZE);
+    int flags = (PTE_FLAGS(*pte) & ~PTE_RSW) | PTE_W ;
+    *pte = PA2PTE((uint64)mem) | flags;
+    
+    kfree((void*)pa);
+    return (void*)mem;
+  }  
 }

@@ -75,26 +75,11 @@ usertrap(void)
     // ok
   } else if(r_scause() == 13 || r_scause() == 15) {
     // 
-    uint64 pa, va = r_stval();
-    pte_t *pte;
-    if(va < PGROUNDDOWN(p->trapframe->sp) || va >= myproc()->sz || 
-      (pte = walk(p->pagetable, va, 0)) == 0 || (*pte & PTE_RSW) == 0) p->killed = 1;
-    else {
-      pa = PTE2PA(*pte);
-      acquire(&ref.lock);
-      ref.refcnt[pa / PGSIZE]--;
-      release(&ref.lock);
-      if(ref.refcnt[pa / PGSIZE] < 1) *pte = (*pte | PTE_W) & ~PTE_RSW;
-      else{
-        void* mem;
-        if((mem = kalloc()) == 0) p->killed = 1;
-        else {
-          memmove(mem, (void*)pa, PGSIZE);
-          int flags = (PTE_FLAGS(*pte) & ~PTE_RSW) | PTE_W ;
-          *pte = PA2PTE(mem) | flags;
-        }
-      }
-    }
+    uint64 va = r_stval();
+    if(va >= p->sz 
+      || cowpage(p->pagetable, va) != 0 
+      || cowalloc(p->pagetable, PGROUNDDOWN(va)) != 0) 
+      p->killed = -1;
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
